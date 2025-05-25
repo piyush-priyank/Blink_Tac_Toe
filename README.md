@@ -1,7 +1,9 @@
-Blink Tac Toe
+**Blink Tac Toe**
+
 Blink Tac Toe is a fun, "twisted" version of the classic Tic Tac Toe game. It adds a unique twist: your emojis vanish after three turns, forcing players to think strategically about placement and timing! The game also includes player name customization, a persistent scoreboard, and clear game status updates.
 ________________________________________
-Features
+**Features**
+
 •	Classic Tic Tac Toe with a Twist: Emojis disappear after three turns, adding a new strategic layer.
 •	Player Customization: Enter player names and choose unique emoji categories for each player.
 •	Persistent Scoreboard: Tracks win for each player across multiple game rounds and even saves the scores and names when you close and reopen the browser.
@@ -10,12 +12,14 @@ Features
 •	Help Section: A dedicated section explains the rules of the game.
 •	Responsive Design: Enjoy the game seamlessly on various screen sizes.
 ________________________________________
-Technologies Used
+**Technologies Used**
+
 •	React: A JavaScript library for building user interfaces.
 •	HTML5: For structuring the web content.
 •	CSS3: For styling the game's appearance.
 ________________________________________
-How to Play
+**How to Play**
+
 1.	Start the Game: 
 o	Enter Player 1 and Player 2 names.
 o	Choose an emoji category for each player from the dropdowns.
