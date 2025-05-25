@@ -19,18 +19,21 @@ const App = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [message, setMessage] = useState('');
-  const [errorVisible, setErrorVisible] = useState(false);
+  const [messageType, setMessageType] = useState('info');
+  
+  const [winningLine, setWinningLine] = useState(null); 
+  const [showConfirmReset, setShowConfirmReset] = useState(false);
 
   const currentPlayer = players.find(p => p.id === currentPlayerId);
 
   useEffect(() => {
-    if (gameStarted && !winner) {
+    if (gameStarted && !winner && messageType === 'info') {
       const currentCategoryEmojis = EMOJI_CATEGORIES[currentPlayer.category];
-      setMessage(`${currentPlayer.name}'s Turn ${currentCategoryEmojis[0]}`); 
+      setMessage(`${currentPlayer.name}'s Turn ${currentCategoryEmojis[0]}`);
     } else if (winner) {
-      setMessage(`Player ${winner.id} Wins! ${winner.emoji}`);
+      setMessage(`Player ${winner.id} Wins!`);
     }
-  }, [currentPlayerId, gameStarted, winner, currentPlayer]);
+  }, [currentPlayerId, gameStarted, winner, currentPlayer, messageType]);
 
   const handleStartGame = (player1Category, player2Category) => {
     setPlayers([
@@ -42,66 +45,98 @@ const App = () => {
     setCurrentPlayerId(1);
     setWinner(null);
     setMessage('');
-    setErrorVisible(false);
+    setMessageType('info');
+    
+    setWinningLine(null); 
+    
+    setShowConfirmReset(false);
   };
 
-  const showTempMessage = (msg) => {
+  const showTempMessage = (msg, type = 'error') => {
     setMessage(msg);
-    setErrorVisible(true);
+    setMessageType(type);
     setTimeout(() => {
-      setErrorVisible(false);
-      if (!winner) { // Revert to turn message if no winner
+      if (!winner && gameStarted) {
         const currentCategoryEmojis = EMOJI_CATEGORIES[currentPlayer.category];
         setMessage(`${currentPlayer.name}'s Turn ${currentCategoryEmojis[0]}`);
+        setMessageType('info');
+      } else if (!gameStarted && !winner) {
+         setMessage('');
+         setMessageType('info');
+      } else if (winner) {
+          setMessage(`Player ${winner.id} Wins!`);
+          setMessageType('winner');
       }
     }, 2000);
   };
 
   const handleCellClick = (row, col) => {
-    if (!gameStarted || winner || (board[row][col]?.player === currentPlayerId && board[row][col]?.isOldest !== true)) {
+    if (!gameStarted) {
+      return;
+    }
+    if (winner) {
       return;
     }
 
     const newBoard = JSON.parse(JSON.stringify(board));
     const newPlayers = JSON.parse(JSON.stringify(players));
-
     const player = newPlayers.find(p => p.id === currentPlayerId);
-    if (!player) return;
 
-    const currentEmoji = getRandomEmoji(EMOJI_CATEGORIES[player.category]);
+    if (!player) {
+      console.error("Current player not found, this shouldn't happen.");
+      return;
+    }
 
-    // Check for vanishing rule
+    if (newBoard[row][col] && newBoard[row][col].player === currentPlayerId) {
+      showTempMessage("You already have an emoji here!", "info");
+      return;
+    }
+
+    const currentEmoji = getRandomEmoji(player);
+    let oldestEmojiRemoved = false;
+
     if (player.activeEmojis.length >= 3) {
       const oldestEmojiPos = player.activeEmojis[0];
       const [oldestRow, oldestCol] = oldestEmojiPos.split(',').map(Number);
 
-      // Rule: The 4th emoji cannot be placed over where the 1st emoji was placed.
       if (oldestRow === row && oldestCol === col) {
-        showTempMessage("Can't place 4th emoji on oldest spot!");
+        showTempMessage("Can't place 4th emoji on your oldest spot!", "error");
         return;
       }
 
-      
-      newBoard[oldestRow][oldestCol] = null; 
+      newBoard[oldestRow][oldestCol] = null;
       player.activeEmojis.shift();
+      oldestEmojiRemoved = true;
     }
 
-    
     newBoard[row][col] = { emoji: currentEmoji, player: currentPlayerId, timestamp: Date.now() };
     player.activeEmojis.push(`${row},${col}`);
 
     setBoard(newBoard);
     setPlayers(newPlayers);
 
-    // Check for win
-    if (checkWin(newBoard, currentPlayerId, WINNING_PATTERNS)) {
+    // START: Changes for Highlighting Winning Combination
+    const currentWinningLine = checkWin(newBoard, currentPlayerId, WINNING_PATTERNS); // CALL: Get the winning line
+    if (currentWinningLine) {
       setWinner(player);
+      setWinningLine(currentWinningLine); // SET: Store the winning line in state
+      setMessageType('winner'); // UPDATE: Set message type to 'winner'
     } else {
+    // END: Changes for Highlighting Winning Combination
       setCurrentPlayerId(currentPlayerId === 1 ? 2 : 1);
+      setMessageType('info');
     }
   };
 
   const handlePlayAgain = () => {
+    if (gameStarted && !winner) {
+      setShowConfirmReset(true);
+    } else {
+      resetGame();
+    }
+  };
+
+  const resetGame = () => {
     setBoard(initializeBoard());
     setPlayers([
       { id: 1, name: 'Player 1', category: null, activeEmojis: [], emoji: '' },
@@ -111,7 +146,15 @@ const App = () => {
     setWinner(null);
     setGameStarted(false);
     setMessage('');
-    setErrorVisible(false);
+    setMessageType('info');
+    // START: Changes for Highlighting Winning Combination
+    setWinningLine(null); // RESET: Clear winning line on game reset
+    // END: Changes for Highlighting Winning Combination
+    setShowConfirmReset(false);
+  };
+
+  const cancelReset = () => {
+    setShowConfirmReset(false);
   };
 
   return (
@@ -136,18 +179,35 @@ const App = () => {
         <div className="game-container">
           <GameStatus
             message={message}
-            isError={errorVisible}
+            isError={messageType === 'error'}
+            isInfo={messageType === 'info'}
             player1Turn={currentPlayerId === 1 && !winner}
             player2Turn={currentPlayerId === 2 && !winner}
+            // START: Changes for Highlighting Winning Combination
+            isWinnerMessage={!!winner} // NEW PROP: Indicate if it's a winner message for styling
+            // END: Changes for Highlighting Winning Combination
           />
-          <Board board={board} onCellClick={handleCellClick} />
-          {winner && (
-            <PlayAgainButton onClick={handlePlayAgain} />
-          )}
+          {/* START: Changes for Highlighting Winning Combination */}
+          <Board board={board} onCellClick={handleCellClick} winningLine={winningLine} /> {/* PROP: Pass winningLine */}
+          {/* END: Changes for Highlighting Winning Combination */}
+          <button className="play-again-button" onClick={handlePlayAgain}>
+            {winner ? 'Play Again' : 'Restart Game'}
+          </button>
         </div>
       )}
 
       {showHelp && <HelpSection onClose={() => setShowHelp(false)} />}
+
+      {showConfirmReset && (
+        <div className="help-section-overlay">
+          <div className="help-section-content confirm-reset-modal">
+            <h2>Restart Game?</h2>
+            <p>Are you sure you want to restart the current game?</p>
+            <button onClick={resetGame} className="confirm-button">Yes, Restart</button>
+            <button onClick={cancelReset} className="cancel-button">No, Continue</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

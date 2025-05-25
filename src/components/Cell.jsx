@@ -1,9 +1,11 @@
 import React from 'react';
-import '../App.css'; 
+import '../App.css';
 
-const Cell = ({ row, col, cellData, onClick }) => {
-  const cellClass = `cell ${cellData ? 'is-placed' : ''}`; 
 
+const Cell = ({ row, col, cellData, onClick, isWinningCell }) => {
+  
+  const cellClass = `cell ${cellData ? 'is-placed' : ''} ${isWinningCell ? 'is-winning-cell' : ''}`; // CLASS: Apply class
+  
   return (
     <div
       className={cellClass}

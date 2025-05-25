@@ -1,11 +1,16 @@
 import { EMOJI_CATEGORIES, WINNING_PATTERNS } from './constants';
 
 /**
- * Returns a random emoji from the given category.
- * @param {string[]} categoryEmojis - An array of emojis for a specific category.
+ * Returns a random emoji from the given player's category.
+ * @param {Object} player - The player object with a 'category' property.
  * @returns {string} A random emoji.
  */
-export const getRandomEmoji = (categoryEmojis) => {
+export const getRandomEmoji = (player) => {
+  const categoryEmojis = EMOJI_CATEGORIES[player.category];
+  if (!categoryEmojis || categoryEmojis.length === 0) {
+    console.warn(`No emojis found for category: ${player.category}. Falling back to default.`);
+    return '❓';
+  }
   const randomIndex = Math.floor(Math.random() * categoryEmojis.length);
   return categoryEmojis[randomIndex];
 };
@@ -19,25 +24,25 @@ export const initializeBoard = () => {
 };
 
 /**
- * Checks if a player has won the game.
+ * Checks if a player has won the game and returns the winning pattern.
  * @param {Array<Array<Object|null>>} board - The current state of the board.
  * @param {number} playerId - The ID of the player to check for a win.
  * @param {Array<Array<number>>} patterns - Predefined winning patterns.
- * @returns {boolean} True if the player has won, false otherwise.
+ * @returns {Array<number>|null} The winning pattern (array of indices) if won, null otherwise.
  */
+
 export const checkWin = (board, playerId, patterns) => {
-  const flatBoard = board.flat(); 
+  const flatBoard = board.flat();
 
   for (let i = 0; i < patterns.length; i++) {
     const [a, b, c] = patterns[i];
-    
     if (
       flatBoard[a] && flatBoard[a].player === playerId &&
       flatBoard[b] && flatBoard[b].player === playerId &&
       flatBoard[c] && flatBoard[c].player === playerId
     ) {
-      return true; 
+      return patterns[i]; 
     }
   }
-  return false; 
+  return null;
 };
